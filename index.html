@@ -49,6 +49,6 @@ function dbGet(key){return new Promise((resolve,reject)=>{const req=indexedDB.op
 function dbPut(key,value){return new Promise((resolve,reject)=>{const req=indexedDB.open('LingLuFiles',1);req.onupgradeneeded=()=>req.result.createObjectStore('files');req.onsuccess=()=>{const tx=req.result.transaction('files','readwrite');tx.objectStore('files').put(value,key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)}})}
 // Clear old prototype history once. New sessions persist normally; local dates use the device timezone.
 if(localStorage.getItem('ll.clean.v1')!=='yes'){stats=[];save('stats',stats);localStorage.setItem('ll.clean.v1','yes')}
-function boot(){homePage();const zone=localStorage.getItem('ll.timezone')||'Asia/Ho_Chi_Minh';$('#localClock').textContent=new Intl.DateTimeFormat('vi-VN',{weekday:'short',day:'numeric',month:'short',timeZone:zone}).format(new Date());reminders.forEach(scheduleReminder)}
+function boot(){homePage();const drawClock=()=>{const zone=localStorage.getItem('ll.timezone')||'Asia/Ho_Chi_Minh';$('#localClock').textContent=new Intl.DateTimeFormat('vi-VN',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:zone}).format(new Date())};drawClock();setInterval(drawClock,60000);reminders.forEach(scheduleReminder)}
 boot();
 </script></body></html>
