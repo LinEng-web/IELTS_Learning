@@ -135,4 +135,55 @@ const finalProgress=progressPage;progressPage=function(){finalProgress();workspa
 <script>
 const startAsPage=startTest;
 startTest=function(test,mode){startAsPage(test,mode);workspace.classList.add('visible','exam-running');workspace.innerHTML='';workspace.append(timerModal);timerModal.className='timer-modal exam-page';const top=timerModal.querySelector('.timer-top');if(top){top.insertAdjacentHTML('beforebegin','<div class="exam-header-line"><span>Ling Lu · IELTS Workspace</span><button class="exam-exit" id="leavePaper">← Thoát bài</button></div>');}timerModal.querySelector('#leavePaper').onclick=()=>{clearInterval(timerId);timerModal.remove();workspace.classList.remove('visible','exam-running');showSkill(activeSkill)};};
-</script></body></html>
+</script>
+<style>
+.dashboard-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:18px 0}.dashboard-action,.daily-challenge{background:#fff;border:1px solid #ead9dc;border-radius:16px;padding:20px;box-shadow:0 8px 22px #56273208}.dashboard-action h2,.daily-challenge h2{font:700 16px Manrope;margin:0 0 8px;color:#502632}.dashboard-action p,.daily-challenge p{font-size:12px;line-height:1.6;color:#89767b}.metric-zero{opacity:.94}.challenge-accept{margin-top:10px}.empty-dashboard{padding:20px;border:1px dashed #d9c4c8;border-radius:12px;color:#8f7c81;background:#fffaf9;font-size:12px}
+</style>
+<script>
+// Start with an empty learner record; there are no imported or completed activities yet.
+stats=[];
+localStorage.setItem('ielts-atelier-study-stats','[]');
+document.querySelector('.recent-list')?.closest('section')?.remove();
+document.querySelector('.focus-panel')?.remove();
+document.querySelectorAll('.skill-card .tag').forEach(x=>x.textContent='0 đề');
+document.querySelectorAll('.skill-card .card-bottom b').forEach(x=>x.textContent='0 bài →');
+document.querySelector('.hero p').textContent='Tiến độ của bạn sẽ bắt đầu tăng sau khi hoàn thành bài học hoặc bài thi.';
+function renderDashboardActions(){
+ const host=document.querySelector('.hero');if(!host)return;
+ document.querySelector('.dashboard-actions')?.remove();
+ const t=(customTests||[])[0],c=(userCourses||[])[0];
+ let html='<div class="dashboard-actions">';
+ if(t)html+='<article class="dashboard-action"><div class="eyebrow">TIẾP TỤC HỌC</div><h2>'+safe(t.name)+'</h2><p>'+safe(t.skill)+' · '+(t.duration||40)+' phút</p><button class="primary" id="continueUploadedTest">Mở bài làm →</button></article>';
+ if(t){html+='<article class="daily-challenge"><div class="eyebrow">THỬ THÁCH HÔM NAY</div><h2>Hoàn thành một đề '+safe(t.skill)+'</h2><p>'+safe(t.name)+' · '+(t.duration||40)+' phút. Hoàn tất để ghi nhận vào tiến độ.</p><button class="primary challenge-accept" id="acceptDailyChallenge">Chấp nhận thử thách</button></article>'}
+ else if(c)html+='<article class="daily-challenge"><div class="eyebrow">THỬ THÁCH HÔM NAY</div><h2>Học một chủ đề trong khóa học</h2><p>'+safe(c.title)+'</p><button class="primary challenge-accept" id="acceptDailyChallenge">Chấp nhận thử thách</button></article>';
+ else html+='<div class="empty-dashboard">Chưa có đề thi hoặc khóa học. Thử thách sẽ xuất hiện sau khi bạn thêm nội dung đầu tiên.</div>';
+ html+='</div>';host.insertAdjacentHTML('afterend',html);
+ const openTest=()=>{const test=(customTests||[])[0];if(test)startTest(test,test.mode||'practice')};
+ document.querySelector('#continueUploadedTest')?.addEventListener('click',openTest);
+ document.querySelector('#acceptDailyChallenge')?.addEventListener('click',()=>{if(t)openTest();else if(c)coursesPage()});
+}
+const previousShowHomeEmpty=showHome;
+showHome=function(){previousShowHomeEmpty();document.querySelector('.recent-list')?.closest('section')?.remove();document.querySelector('.focus-panel')?.remove();renderDashboardActions()};
+function progressPage(){
+ currentView='progress';const recent=stats;const real=recent.filter(x=>x.mode==='exam'&&Number.isFinite(Number(x.band)));
+ const avg=(rows)=>rows.length?Math.round(rows.reduce((a,x)=>a+(Number(x.accuracy)||0),0)/rows.length):0;
+ const estimated=real.length?(real.reduce((a,x)=>a+Number(x.band),0)/real.length).toFixed(1):'0.0';
+ const mins=recent.reduce((a,x)=>a+(Number(x.minutes)||0),0);
+ const skillRows=['Listening','Reading','Writing'].map(skill=>{const rows=recent.filter(x=>x.skill===skill);return '<div class="skill-progress-row"><b>'+skill+'</b><div class="track"><i style="width:'+avg(rows)+'%"></i></div><strong>'+avg(rows)+'%</strong></div>'}).join('');
+ const map={};recent.forEach(s=>Object.entries(s.typeResults||{}).forEach(([type,v])=>{const key=s.skill+' · '+type;map[key]??={correct:0,total:0};map[key].correct+=Number(v.correct)||0;map[key].total+=Number(v.total)||0}));
+ const weaknesses=Object.entries(map).sort((a,b)=>(a[1].total?a[1].correct/a[1].total:0)-(b[1].total?b[1].correct/b[1].total:0)).slice(0,4).map(([name,v])=>'<div class="weakness-row"><b>'+safe(name)+'</b><span>'+Math.round(v.correct/v.total*100)+'% đúng</span></div>').join('');
+ const completedWeek=recent.filter(x=>Date.now()-Number(x.time)<7*86400000).length;
+ renderPage('Tiến độ & thành tích','Mọi chỉ số được tính từ dữ liệu bạn tự tạo và các phiên đã hoàn thành.','<div class="metric-grid"><article class="metric-card metric-zero"><small>Estimated Band · thi thật</small><strong>'+estimated+'</strong><span>'+real.length+' phiên thi</span></article><article class="metric-card metric-zero"><small>Accuracy Rate</small><strong>'+avg(recent)+'%</strong><span>'+recent.length+' bài đã làm</span></article><article class="metric-card metric-zero"><small>Study Time</small><strong>'+Math.floor(mins/60)+'h '+mins%60+'m</strong><span>Thời gian đã ghi nhận</span></article><article class="metric-card metric-zero"><small>Learning Streak</small><strong>'+countStreak()+' ngày</strong><span>Ngày học liên tục</span></article></div><div class="progress-layout"><section class="panel"><h2>Skill Progress</h2>'+skillRows+'<div class="goal-box">Goal Completion tuần này · '+completedWeek+' / 5 phiên</div><button class="outline" id="openBandSettings" style="margin-top:12px">⚙ Cài đặt quy đổi điểm</button></section><section class="panel"><h2>Weakness Analysis</h2>'+(weaknesses||'<div class="empty-state">Chưa có dữ liệu. Điểm mạnh/yếu sẽ hiện sau khi làm đề có câu hỏi và đáp án.</div>')+'</section></div><section class="panel" style="margin-top:14px"><h2>Thành tích cá nhân</h2><div class="achievement">'+countStreak()+' ngày streak · '+recent.length+' phiên hoàn thành · '+vocab.length+' từ vựng</div></section>');
+ workspace.querySelector('#openBandSettings').onclick=()=>showBandSettings();
+}
+function showBandSettings(){
+ currentView='settings';const fields=['Listening','Reading'].map(skill=>'<div class="builder-fields"><div class="field"><label>'+skill+' · tổng số câu</label><input class="rule-total" data-skill="'+skill+'" type="number" min="1" value="'+bandRules[skill].total+'"></div><div class="field"><label>Mốc band=số câu đúng</label><input class="rule-steps" data-skill="'+skill+'" value="'+bandRules[skill].steps.map(x=>x[1]+'='+x[0]).join(', ')+'"></div></div>').join('');
+ renderPage('Cài đặt quy đổi điểm','Thiết lập cách tính band cho Listening và Reading.','<section class="panel"><p>Nhập các mốc theo dạng band=số câu đúng, cách nhau bằng dấu phẩy.</p>'+fields+'<button class="primary" id="saveBandSettings">Lưu cài đặt</button></section>');
+ workspace.querySelector('#saveBandSettings').onclick=()=>{for(const skill of ['Listening','Reading']){const total=Math.max(1,Number(workspace.querySelector('.rule-total[data-skill="'+skill+'"]').value)||40);const steps=workspace.querySelector('.rule-steps[data-skill="'+skill+'"]').value.split(',').map(x=>x.trim().split('=').map(Number)).filter(x=>x.length===2&&x.every(Number.isFinite)).map(([band,q])=>[q,band]).sort((a,b)=>a[0]-b[0]);if(!steps.length)return toast('Nhập ít nhất một mốc hợp lệ.');bandRules[skill]={total,steps}}localStorage.setItem(rulesKey,JSON.stringify(bandRules));toast('Đã lưu quy đổi band.')}
+}
+const routeBeforeBandSettings=route;
+route=function(v){if(v==='settings')return showBandSettings();return routeBeforeBandSettings(v)};
+document.querySelectorAll('.nav [data-view]').forEach(b=>b.onclick=()=>route(b.dataset.view));
+renderDashboardActions();
+</script>
+</body></html>
