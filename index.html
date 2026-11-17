@@ -141,8 +141,7 @@ startTest=function(test,mode){startAsPage(test,mode);workspace.classList.add('vi
 </style>
 <script>
 // Start with an empty learner record; there are no imported or completed activities yet.
-stats=[];
-localStorage.setItem('ielts-atelier-study-stats','[]');
+if(localStorage.getItem('ielts-atelier-history-reset-v1')!=='done'){stats=[];localStorage.setItem('ielts-atelier-study-stats','[]');localStorage.setItem('ielts-atelier-history-reset-v1','done')}
 document.querySelector('.recent-list')?.closest('section')?.remove();
 document.querySelector('.focus-panel')?.remove();
 document.querySelectorAll('.skill-card .tag').forEach(x=>x.textContent='0 đề');
